@@ -1,0 +1,42 @@
+# Core ML — install torch first with appropriate CUDA version
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+torch>=2.3.0
+torchvision
+torchaudio
+
+# HuggingFace ecosystem
+transformers>=4.45.0
+datasets>=2.20.0
+tokenizers>=0.19.0
+accelerate>=0.33.0
+peft>=0.12.0
+trl>=0.10.0
+
+# Quantization (4-bit / 8-bit) — needed for QLoRA or memory-constrained FFT
+bitsandbytes>=0.43.0
+
+# Evaluation
+sacrebleu>=2.4.0
+evaluate>=0.4.0
+nltk>=3.8.0
+
+# Experiment tracking
+tensorboard>=2.17.0
+
+# Data manipulation
+pandas>=2.0.0
+numpy>=1.26.0
+
+# Visualization
+matplotlib>=3.8.0
+seaborn>=0.13.0
+wordcloud>=1.9.0
+
+# Jupyter environment
+jupyter>=1.0.0
+ipywidgets>=8.0.0
+tqdm>=4.66.0
+
+# Utilities
+scipy>=1.13.0
+scikit-learn>=1.4.0
