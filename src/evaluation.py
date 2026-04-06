@@ -89,3 +89,43 @@ def run_batch_inference(
 def sentence_bleu(hypothesis: str, reference: str) -> float:
     """Compute sentence-level BLEU for a single hypothesis/reference pair."""
     return round(_BLEU.sentence_score(hypothesis, [reference]).score, 2)
+
+
+def compute_bert_scores(hypotheses: list[str], references: list[str],
+                        model_type: str = "distilbert-base-uncased",
+                        device: str | None = None) -> dict:
+    """
+    Compute BERTScore (precision, recall, F1) over hypothesis/reference lists.
+
+    BERTScore is more appropriate than BLEU for style-transfer tasks because it
+    measures semantic similarity rather than exact n-gram overlap — a valid
+    Shakespearean paraphrase scores high even when its vocabulary differs.
+
+    Args:
+        hypotheses: model-generated translations
+        references: gold reference translations
+        model_type: HuggingFace model used for contextual embeddings.
+                    'distilbert-base-uncased' is fast; use 'roberta-large' for
+                    higher-quality scores at the cost of extra VRAM.
+        device: 'cuda', 'cpu', or None (auto-detect)
+
+    Returns:
+        dict with keys bert_p_mean, bert_r_mean, bert_f1_mean
+    """
+    from bert_score import score as bert_score_fn
+    import torch
+
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    P, R, F1 = bert_score_fn(
+        hypotheses, references,
+        model_type=model_type,
+        device=device,
+        verbose=False,
+    )
+    return {
+        "bert_p_mean":  round(float(P.mean()), 4),
+        "bert_r_mean":  round(float(R.mean()), 4),
+        "bert_f1_mean": round(float(F1.mean()), 4),
+    }
