@@ -1,310 +1,287 @@
-# Mormon-NLT: Modern English → Shakespearean Style Transfer
+# Mormon-NLT: Setup & Running Guide
 
-This project implements neural style transfer from Modern English to Shakespearean English using fine-tuned Qwen2.5 language models with LoRA adaptation and full fine-tuning (FFT). We conduct three progressive experiments to optimize training strategy, model capacity, and evaluation metrics.
+**Project**: Modern English → Shakespearean Style Transfer using Qwen2.5 + LoRA/FFT
 
-**Objective**: Preserve semantic content while transforming text to Shakespearean style (archaic vocabulary, iambic patterns, poetic diction).
-
----
-
-## Experiment Overview
-
-| **Dimension** | **Exp 1 (Baseline)** | **Exp 2 (Regularization)** | **Exp 3 (Optimal Strategy)** |
-|---|---|---|---|
-| **Training Direction** | Bidirectional | Bidirectional | **Unidirectional (Mod→Shak)** |
-| **LoRA Configuration** | r=16, α=32 | r=16, α=32 | **r=32, α=64** |
-| **FFT Base Model** | Qwen2.5-1.5B | Qwen2.5-1.5B | Qwen2.5-1.5B |
-| **LoRA Base Model** | Qwen2.5-3B | Qwen2.5-3B | Qwen2.5-3B |
-| **Epochs (LoRA)** | 3 | **2 + EarlyStopping** | 2 + EarlyStopping |
-| **Epochs (FFT)** | 3 | 3 | 3 |
-| **Learning Rate (LoRA)** | 2e-4 | 2e-4 | 2e-4 |
-| **Learning Rate (FFT)** | 2e-5 | **5e-5** | 5e-5 |
-| **Test Metric** | BLEU, ChrF | BLEU, ChrF, **BERTScore** | BLEU, ChrF, BERTScore |
-| **BERTScore Model** | – | distilbert-base-uncased | **roberta-large** |
+See **REPORT.md** for comprehensive experimental results, metrics, and findings.
 
 ---
 
-## Experiment Justifications & Changes
+## Hardware Profile
 
-### Exp 1 → Exp 2: Addressing Overfitting & Underfitting
-
-**Problem**:
-- LoRA validation loss rose sharply after epoch 2, indicating overfitting
-- FFT training plateaued, suggesting learning rate too conservative
-
-**Changes**:
-1. **LoRA Early Stopping**: Reduced epochs 3→2 with validation monitoring. Rationale: Stop before validation diverges from training loss, preventing memorization on small dataset (3515 examples).
-2. **FFT Learning Rate Boost**: Increased LR 2e-5→5e-5. Rationale: FFT loss remained stagnant throughout training; higher LR helps escape local minima and explore loss landscape more aggressively.
-3. **Add BERTScore**: BLEU inadequate for style transfer (penalizes valid paraphrases). BERTScore (semantic similarity via embeddings) is better proxy for meaning preservation.
-
-**Result**: LoRA BERTScore +2.8% (0.67→0.695), FFT BERTScore +0.8% (0.68→0.683). Minimal gains → hypothesis that issue is **data direction**, not regularization.
+| Item | Spec |
+|------|------|
+| **GPU** | NVIDIA GeForce RTX 5070 Laptop GPU |
+| **VRAM** | 8.5 GB |
+| **CUDA Driver** | 12.8 |
+| **PyTorch** | 2.11.0+cu128 |
 
 ---
 
-### Exp 2 → Exp 3: Unidirectional Training (Major Breakthrough)
+## Environment Setup
 
-**Problem**:
-- Bidirectional training (Modern↔Shak) creates conflicting gradients: model simultaneously learns "convert Modern→Shak" AND "convert Shak→Modern"
-- Mixed objective diffuses learning signal, leading to mediocre outputs on both directions
+### Step 1 — Create Conda Environment (Python 3.11)
 
-**Changes**:
-1. **Unidirectional Data**: Train only Modern→Shak (removed backward examples). Rationale: Focus model on single task; cleaner gradient signal enables better feature learning. This is standard in machine translation.
-2. **Increase LoRA Rank**: 16→32. Rationale: With focused training signal, higher rank (26M→52M adapted params) provides capacity to learn richer Shakespearean patterns without overfitting.
-3. **Upgrade BERTScore**: distilbert→roberta-large. Rationale: roberta-large (355M) is 130x larger, provides higher-quality semantic embeddings.
+```bash
+conda create -n mormon-nlt python=3.11 -y
+conda activate mormon-nlt
+```
 
-**Result**: **LoRA BERTScore +20.9%** (0.695→0.8405), **FFT +23.1%** (0.6831→0.8415). Model meets 0.84 quality target.
+### Step 2 — Install PyTorch (CUDA 12.8)
 
----
+```bash
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+```
 
-## Key Results: All 6 Model Variants
+Verify installation:
+```bash
+python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA: {torch.cuda.is_available()}'); print(f'GPU: {torch.cuda.get_device_name(0)}')"
+```
 
-### Quantitative Metrics (Test Set: 3515 Examples)
+Expected output:
+```
+PyTorch: 2.11.0+cu128
+CUDA: True
+GPU: NVIDIA GeForce RTX 5070 Laptop GPU
+```
 
-| Variant | Base Model | Params | BLEU | ChrF | Sent BLEU P50 | **BERTScore F1** | Inference Time |
-|---|---|---|---|---|---|---|---|
-| **Exp1 LoRA** | Qwen2.5-3B | 13M (0.4%) | 0.10 | 5.73 | 1.03 | N/A | ~1.5-2.5 hrs |
-| **Exp2 LoRA** | Qwen2.5-3B | 13M (0.4%) | 0.12 | 5.56 | 0.77 | 0.695 | ~1.5-2.5 hrs |
-| **Exp3 LoRA** | Qwen2.5-3B | 26M (0.8%) | 0.12 | 5.40 | 0.72 | **0.8405** | ~1.5-2.5 hrs |
-| **Exp1 FFT** | Qwen2.5-1.5B | 1.54B (100%) | 0.09 | 4.83 | 0.39 | N/A | ~2-3 hrs |
-| **Exp2 FFT** | Qwen2.5-1.5B | 1.54B (100%) | 0.08 | 4.75 | 0.63 | 0.6831 | ~2-3 hrs |
-| **Exp3 FFT** | Qwen2.5-1.5B | 1.54B (100%) | 0.10 | 5.27 | 0.80 | **0.8415** | ~2-3 hrs |
+### Step 3 — Clone Repository & Install Dependencies
 
-**Inference timing**: LoRA inference identical across experiments (only adapter swap). FFT faster due to smaller 1.5B base model. Times measured on RTX 5070 Laptop GPU with bfloat16 + PyTorch SDPA optimization. LoRA ~2-3 hrs, FFT ~3-4 hrs for full 3,515-example test set.
+```bash
+cd /home/prasingh/data/Mormon-NLT
+pip install -r requirements.txt
+```
 
-![BLEU and ChrF Progression](outputs/exp3/results/figures/08_all_variants_bleu_chrf.png)
+**Key dependencies**:
+- `transformers` ≥ 4.35.0 (Qwen2.5 support)
+- `peft` (LoRA)
+- `datasets`
+- `sacrebleu`, `bert-score` (evaluation metrics)
+- `peft`, `accelerate`, `bitsandbytes` (training)
 
-*All 6 model variants (3 experiments × 2 methods). LoRA (blue, varying opacity) and FFT (orange, varying opacity) show progression from Exp1→3. Unidirectional training (Exp3, full opacity) achieves highest BERTScore but minimal BLEU/ChrF gains, indicating embedding-level improvement without proportional surface-form change.*
+### Step 4 — Install Jupyter Kernel
 
----
+```bash
+pip install ipykernel
+python -m ipykernel install --user --name mormon-nlt --display-name "Mormon-NLT"
+```
 
-## Training Time & Resource Requirements
+### Step 5 — (Optional) Flash Attention 2
 
-Estimated duration on **RTX 5070 Laptop GPU** (8.5 GB VRAM, actual measured times from logs):
+For 2-3x faster training on RTX 5070 (Blackwell, sm_120):
 
-| Phase | Model | Steps | Measured Duration* | VRAM | Batch Size |
-|---|---|---|---|---|---|
-| **Exp1 LoRA** | Qwen2.5-3B | 7,518 | ~3.5-4.0 hours | 8-9 GB | 8 |
-| **Exp2 LoRA** | Qwen2.5-3B | 2,600 | ~1.5-2.0 hours | 8-9 GB | 8 |
-| **Exp3 LoRA** | Qwen2.5-3B | 1,800 | ~1.0-1.5 hours | 8-9 GB | 8 |
-| **Exp1 FFT** | Qwen2.5-1.5B | 1,254 | ~1.5-2.0 hours | 9-10 GB | 4 |
-| **Exp2 FFT** | Qwen2.5-1.5B | 1,254 | ~1.5-2.0 hours | 9-10 GB | 4 |
-| **Exp3 FFT** | Qwen2.5-1.5B | 627 | ~0.75-1.0 hours | 9-10 GB | 4 |
-| **Inference (Full Test)** | LoRA | 3,515 | ~2-3 hours | 6-8 GB | batch=32 |
-| **Inference (Full Test)** | FFT | 3,515 | ~3-4 hours | 7-9 GB | batch=32 |
+```bash
+pip install "flash-attn>=2.8.3" --no-build-isolation
+```
 
-*Estimated based on step counts from training logs (Exp1 LoRA ~7,518 steps, Exp2 LoRA ~2,600 steps, Exp3 LoRA ~1,800 steps with early stopping). Actual times depend on RTX 5070 Laptop GPU compute density and system load. **Note**: Exp1 LoRA did not save training logs; timing estimated from step count.
-
-**Total project runtime**: ~18-22 hours (training + evaluation across 3 experiments, 6 models, RTX 5070 Laptop GPU, sequential execution).
-
----
-
-## Model Architecture & Hyperparameters
-
-### LoRA Setup (Qwen2.5-3B-Instruct)
-- **Base Model**: Qwen2.5-3B-Instruct (3B params, chat-optimized)
-- **Tokenizer**: Qwen2.5 (151,643 vocab), BOS/EOS tags: `<|im_start|>` / `<|im_end|>`
-- **Rank**: r=16 (Exp1-2, 13M params), r=32 (Exp3, 26M params)
-- **Alpha**: 2× rank (32 for Exp1-2, 64 for Exp3)
-- **Target Modules**: q_proj, v_proj, k_proj, o_proj, gate_proj, up_proj, down_proj
-- **Task**: CAUSAL_LM (language model fine-tuning)
-- **Hardware**: RTX 5070 Laptop GPU (8.5 GB VRAM), bfloat16, SDPA optimization
-
-### FFT Setup (Qwen2.5-1.5B-Instruct)
-- **Base Model**: Qwen2.5-1.5B-Instruct (1.5B parameters)
-- **Trainable Parameters**: 1.54B (100%)
-- **Optimizer**: AdamW (default betas)
-- **Hardware**: RTX 5070 Laptop GPU (8.5 GB VRAM), bfloat16, SDPA optimization
-
-### Training Hyperparameters
-
-| Parameter | LoRA | FFT |
-|---|---|---|
-| Learning Rate | 2e-4 | 2e-5 (Exp1), 5e-5 (Exp2-3) |
-| Epochs | 3 (Exp1), 2 (Exp2-3) | 3 |
-| Batch Size | 8 | 4 |
-| Warmup Steps | 100 | 50 |
-| Max Grad Norm | 1.0 | 1.0 |
-| Weight Decay | 0.01 | 0.01 |
-| Eval Strategy | steps (500) | steps (500) |
-| Early Stopping (Exp2-3 LoRA) | patience=1, eval_loss | – |
-| Precision | bfloat16 | bfloat16 |
+**If build fails**: Use `attn_implementation='sdpa'` (PyTorch SDPA) instead—performance difference is minimal with modern PyTorch.
 
 ---
 
-## Evaluation Metrics
+## Running the Project
 
-### BLEU (Bilingual Evaluation Understudy)
-SacreBLEU corpus score measuring n-gram overlap with references. **Limitation**: Inappropriate for style transfer—penalizes valid paraphrases despite correct meaning.
+### Quick Start
 
-### ChrF (Character n-gram F-score)
-Character-level n-gram overlap (n=1-6), more robust to morphological variation than word BLEU.
+```bash
+conda activate mormon-nlt
+cd /home/prasingh/data/Mormon-NLT
+jupyter notebook
+```
 
-### BERTScore F1
-Semantic similarity via contextual embeddings (avg pooled cosine similarity). **Exp2 uses distilbert-base-uncased; Exp3 uses roberta-large** for improved fidelity.
+Select kernel: **Mormon-NLT**
 
-![BERTScore F1 Progression](outputs/exp3/results/figures/08_bertscore_progression.png)
+### Notebook Execution Order
 
-*Major improvements from Exp2→Exp3. LoRA F1: 0.695→0.8405 (+20.9%), FFT F1: 0.6831→0.8415 (+23.1%). Unidirectional training (Exp3) delivers breakthrough gains. Both reach 0.84 target, indicating strong semantic embedding alignment. Note: These gains do not translate to equivalent QA preservation (see validation section below).*
+| Step | Notebook | Purpose | Runtime |
+|------|----------|---------|---------|
+| 1 | `01_data_download_and_preprocessing.ipynb` | Download data, create train/val/test splits | ~2 min |
+| 2 | `02_eda_shakespeare_dataset.ipynb` | Analyze vocabulary, lengths, distributions | ~3 min |
+| 3 | `03_model_setup_and_tokenizer.ipynb` | Load Qwen2.5, verify tokenizer, zero-shot test | ~5 min |
+| 4a | `04_exp1_lora_training.ipynb` | Train LoRA (Exp1, r=16, bidirectional) | ~4.0 hrs |
+| 4b | `04_exp2_lora_training.ipynb` | Train LoRA (Exp2, r=16, early stopping) | ~2.0 hrs |
+| 4c | `04_exp3_lora_training.ipynb` | Train LoRA (Exp3, r=32, unidirectional) | ~1.5 hrs |
+| 5a | `05_exp1_fft_training.ipynb` | Fine-tune (Exp1, 1.5B, bidirectional) | ~2.0 hrs |
+| 5b | `05_exp2_fft_training.ipynb` | Fine-tune (Exp2, 1.5B, higher LR) | ~2.0 hrs |
+| 5c | `05_exp3_fft_training.ipynb` | Fine-tune (Exp3, 1.5B, unidirectional) | ~1.0 hrs |
+| 6a | `06_exp1_bleu_evaluation.ipynb` | Evaluate Exp1 models | ~2.5 hrs |
+| 6b | `06_exp2_bleu_evaluation.ipynb` | Evaluate Exp2 models | ~2.5 hrs |
+| 6c | `06_exp3_bleu_evaluation.ipynb` | Evaluate Exp3 models | ~2.5 hrs |
+| 7a | `07_exp1_comparison_and_results.ipynb` | Compare LoRA vs FFT (Exp1) | ~1 min |
+| 7b | `07_exp2_comparison_and_results.ipynb` | Compare across Exp1-2 | ~1 min |
+| 7c | `07_exp3_comparison_and_results.ipynb` | Compare all 3 experiments | ~1 min |
+| 8 | `08_overall_comparison.ipynb` | Aggregate all 6 variants | ~1 min |
+| 9 | `08_qa_testing.ipynb` | Manual QA validation (10 samples) | ~1 min |
 
----
+**Total runtime**: ~18-22 hours (sequential on RTX 5070)
 
-## Critical Validation: QA Semantic Preservation
-
-Manual QA evaluation (10 representative examples) reveals **severe BERTScore-QA disconnect**:
-
-| Variant | BERTScore F1 | QA Preservation | Gap |
-|---|---|---|---|
-| **Exp1 LoRA** | N/A | **40%** ✓ | – |
-| **Exp2 LoRA** | 0.695 | 15% | **-62pp** ⚠️ |
-| **Exp3 LoRA** | 0.8405 | 35% | **-49pp** ⚠️ |
-| **Exp1 FFT** | N/A | **40%** ✓ | – |
-| **Exp2 FFT** | 0.6831 | 35% | **-39pp** ⚠️ |
-| **Exp3 FFT** | 0.8415 | 20% | **-64pp** ⚠️ |
-
-**Key Finding**: BERTScore exhibits **no correlation with semantic preservation**. Exp3 LoRA (highest F1=0.84) achieves only 35% correct QA preservation vs 40% for simpler Exp1 LoRA. Models frequently hallucinate plausible-sounding Shakespearean text unrelated to source (entities, plot lost). Standard embedding-based metrics insufficient for style transfer evaluation.
-
-*Figure: BERTScore-QA disconnect plot would show here (manual results from qa_evaluation_10sample.json). Exp3 LoRA (0.84 F1) → 35% QA; Exp1 LoRA (N/A F1) → 40% QA. Largest gap: Exp3 FFT (0.84 F1) → only 20% QA. This reveals that BERTScore captures surface embedding similarity but misses factual accuracy and semantic preservation.*
-
----
-
-## Efficiency Rankings (Quality per Parameter)
-
-| Variant | Params (B) | BERTScore F1 | **F1 per 100M** |
-|---|---|---|---|
-| **Exp2 LoRA** | 0.013 | 0.695 | **5.346** |
-| **Exp3 LoRA** | 0.026 | 0.8405 | **3.233** |
-| **Exp3 FFT** | 1.540 | 0.8415 | **0.055** |
-| **Exp2 FFT** | 1.540 | 0.6831 | **0.044** |
-
-Exp2 LoRA achieves best efficiency (5.35 F1 per 100M); Exp3 LoRA trades 1.6x efficiency for 20.9% quality via doubling rank.
-
-![Efficiency Trade-off: Parameters vs Quality](outputs/exp3/results/figures/08_efficiency_scatter.png)
-
-*Log-scale parameter axis reveals LoRA's efficiency advantage. Exp3 LoRA (26M params, F1=0.8405) approaches Exp3 FFT quality (1.54B params, F1=0.8415) with ~60x fewer trainable parameters. FFT provides marginal quality gain (0.001 F1) at 59x cost—LoRA dominates on efficiency frontier. Exp2 LoRA offers even better efficiency (5.3 F1/100M) but at lower absolute quality (0.695 F1).*
+You can parallelize steps 4a/4b/4c and 5a/5b/5c if you have multiple GPUs (not applicable here).
 
 ---
 
-## Key Findings & Recommendations
+## Training Configuration
 
-### ✅ What Worked
-- **Unidirectional training** → +20% BERTScore (validates task-focused learning)
-- **LoRA efficiency** → Matches FFT quality (0.84 F1) with **100x fewer parameters**
-- **Early stopping** → Prevented LoRA overfitting (observable in loss curves)
-- **Roberta-large BERTScore** → More reliable than distilbert
+### LoRA Training (Notebooks 04_exp*_lora_training.ipynb)
 
-### ⚠️ Critical Issue
-**BERTScore inadequate**: 49-64pp gap between F1 and semantic preservation. Models hallucinate plausible Shakespeare unrelated to source. Embedding-based metrics insufficient; need alternatives (ROUGE, semantic role labels, fact verification).
+Configuration for **Qwen2.5-3B-Instruct** with LoRA:
 
-### 🎯 Deployment Recommendation
-**Exp3 LoRA** for production (quality + efficiency), but **mandate downstream QA validation** before release. Consider ensemble with Exp1 LoRA for robustness.
+```python
+# Exp1: Baseline
+lora_r = 16
+lora_alpha = 32
+epochs = 3
+learning_rate = 2e-4
+per_device_train_batch_size = 8
+bidirectional = True
 
-### 🔬 Future Work
-1. Investigate hallucination patterns (attention analysis, failure case categorization)
-2. Develop non-embedding quality metrics (ROUGE-L, semantic role preservation)
-3. Ablate unidirectional data thoroughly
-4. Try LoRA r=64+ with Exp3 unidirectional setup
+# Exp2: Early stopping
+lora_r = 16
+lora_alpha = 32
+epochs = 2  # with early stopping (patience=1)
+learning_rate = 2e-4
+per_device_train_batch_size = 8
+bidirectional = True
+
+# Exp3: Unidirectional + higher rank
+lora_r = 32
+lora_alpha = 64
+epochs = 2  # with early stopping
+learning_rate = 2e-4
+per_device_train_batch_size = 8
+bidirectional = False  # Modern→Shakespeare only
+```
+
+**VRAM**: 8-9 GB (fits on RTX 5070 laptop)
+
+### FFT Training (Notebooks 05_exp*_fft_training.ipynb)
+
+Configuration for **Qwen2.5-1.5B-Instruct** with full fine-tuning:
+
+```python
+# All experiments (Exp1-3 only differ in LR and data direction)
+epochs = 3
+per_device_train_batch_size = 4
+gradient_accumulation_steps = 1
+learning_rate = 2e-5 (Exp1), 5e-5 (Exp2-3)
+max_length = 512
+attention_implementation = 'sdpa'  # PyTorch SDPA (or 'flash_attention_2' if available)
+bidirectional = False  # Only Exp1 uses bidirectional; Exp2-3 unidirectional
+```
+
+**VRAM**: 9-10 GB (fits on RTX 5070 laptop)
 
 ---
 
-## Notebook Workflow
+## Understanding the Experiments
 
-| Notebook | Purpose | Key Outputs |
-|---|---|---|
-| **01_data_download_and_preprocessing.ipynb** | Download parallel corpora from HuggingFace, deduplicate, split 90/10 train/val | `train.jsonl` (40,084 records, bidirectional), `val.jsonl` (2,234), `test.jsonl` (3,515 held-out) |
-| **02_eda_shakespeare_dataset.ipynb** | Analyze raw Shakespeare vocabulary, length distributions, vocabulary overlap | WordCloud, length distributions, Jaccard similarity (0.392), archaic word frequencies |
-| **03_model_setup_and_tokenizer.ipynb** | Load Qwen2.5-3B-Instruct, verify tokenizer (152K vocab), test zero-shot capability | GPU check, chat template validation, baseline translations (surprisingly good: "What is thy name?") |
-| **04_exp{1,2,3}_lora_training.ipynb** | Train LoRA adapters (r=16 or r=32) on train set with callbacks | `outputs/exp{i}/lora/final_adapter/` |
-| **05_exp{1,2,3}_fft_training.ipynb** | Full fine-tune Qwen2.5-1.5B model on train set | `outputs/exp{i}/fft/final_model/` |
-| **06_exp{1,2,3}_bleu_evaluation.ipynb** | Run inference on 3,515 test examples, compute BLEU/ChrF/BERTScore | `outputs/exp{i}/results/bleu_scores.json`, inference times (~2-4 hrs) |
-| **07_exp{1,2,3}_comparison_and_results.ipynb** | Compare results within/across experiments, create comparison tables | Comparison CSVs, bar charts, loss curve overlays |
-| **08_overall_comparison.ipynb** | Aggregate all 6 variants, efficiency analysis, statistical tests | `all_variants_metrics.csv`, `efficiency_rankings.csv`, scatter plots |
-| **08_qa_testing.ipynb** | 10-sample manual QA validation on all 6 models side-by-side | `qa_evaluation_10sample.json` (reveals BERTScore-QA disconnect) |
+### Exp 1 (Baseline)
+- **Data**: Bidirectional (Modern↔Shakespeare)
+- **LoRA**: r=16, 3 epochs
+- **FFT**: 1.5B, 3 epochs, LR=2e-5
+- **Metric**: BLEU, ChrF only
+- **Results**: Baseline—establishes reference point
 
-**Run order**: 01 → 02 → 03 → 04-05 (sequential) → 06-07 (sequential) → 08
-**Estimated time**: ~20 hours (RTX 5070 Laptop GPU)
+### Exp 2 (Regularization)
+- **Data**: Bidirectional
+- **LoRA**: r=16, 2 epochs + early stopping (addresses overfitting)
+- **FFT**: 1.5B, 3 epochs, LR=5e-5 (addresses underfitting)
+- **Metric**: BLEU, ChrF, BERTScore (distilbert-base-uncased)
+- **Results**: Modest improvements (~2-3%)
+
+### Exp 3 (Optimal)
+- **Data**: Unidirectional Modern→Shakespeare only (focused learning signal)
+- **LoRA**: r=32, 2 epochs + early stopping (increased capacity on cleaner data)
+- **FFT**: 1.5B, 3 epochs, LR=5e-5, unidirectional
+- **Metric**: BLEU, ChrF, BERTScore (roberta-large for better quality)
+- **Results**: Major breakthrough—+20% BERTScore gains (0.695→0.8405 LoRA, 0.6831→0.8415 FFT)
+
+See **REPORT.md** for detailed justifications and results.
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| **CUDA out of memory** | Reduce `per_device_train_batch_size` to 2 (LoRA) or 1 (FFT). Set `max_length=256`. |
+| **GPU not detected** | Run `python -c "import torch; print(torch.cuda.get_device_name(0))"`. If nothing, reinstall PyTorch with correct CUDA index. |
+| **`bitsandbytes` error** | Update: `pip install --upgrade bitsandbytes` |
+| **`flash_attn` build fails** | Skip it and use `attn_implementation='sdpa'` in notebooks (already default). |
+| **Jupyter kernel not showing** | Reload VS Code/refresh Jupyter hub after `ipykernel install`. |
+| **Slow model download first run** | First run downloads ~3-6 GB. Subsequent runs use cache (`.../huggingface_cache/`). |
+| **"NotImplementedError: No module named 'flash_attn'"** | Optional—just a performance enhancement. Notebooks default to `sdpa` which works fine. |
+
+---
+
+## Project Structure
+
+```
+Mormon-NLT/
+├── data/
+│   ├── raw/                          # Downloaded datasets (HuggingFace cache)
+│   └── processed/                    # train.jsonl, val.jsonl, test.jsonl
+├── notebooks/                        # Jupyter notebooks (01-08)
+├── outputs/
+│   ├── exp1/
+│   │   ├── lora/final_adapter/      # LoRA weights
+│   │   ├── fft/final_model/         # FFT model
+│   │   └── results/                 # Metrics, figures
+│   ├── exp2/results/                # Exp2 evaluation
+│   └── exp3/results/                # Exp3 evaluation (best results)
+├── src/
+│   ├── data_utils.py                # Dataset loading/preprocessing
+│   ├── model_utils.py               # Model loading, info printing
+│   └── evaluation.py                # BLEU, ChrF, BERTScore computation
+├── README.md                         # This file (Setup & Running)
+├── REPORT.md                         # Comprehensive results & analysis
+└── requirements.txt                 # Python dependencies
+```
+
+---
+
+## Key Findings (See REPORT.md for Details)
+
+✅ **Unidirectional training** is transformative: +20-23% BERTScore improvement (Exp2→Exp3)
+
+✅ **LoRA matches FFT quality** with **100x fewer parameters**: LoRA 26M (0.84 F1) ≈ FFT 1.54B (0.84 F1)
+
+⚠️ **BERTScore inadequate for validation**: Manual QA shows 49-64pp gap between metric and semantic preservation
+
+📊 **Best deployment option**: Exp3 LoRA (26M params, 0.84 F1, 1.5-2.5 hrs inference)
+
+For full analysis, metrics, and experiment justifications, see **REPORT.md**.
 
 ---
 
 ## Dataset
 
-### Data Sources
+**Sources**:
+- ayaan04/english-to-shakespeare: 18,395 pairs (HuggingFace)
+- Roudranil/shakespearean-and-modern-english-conversational-dataset: 8,787 pairs (5,272 train + 3,515 held-out test)
+- cobanov/shakespeare-dataset: 42 raw text files for vocabulary analysis
 
-| Source | Records | Purpose | Notes |
-|---|---|---|---|
-| **ayaan04/english-to-shakespeare** | 18,395 | Parallel corpus | From HuggingFace: parallel Modern↔Shakespeare pairs |
-| **Roudranil/shakespearean-and-modern-english-conversational-dataset** | 8,787 | Conversational + held-out test | 5,272 (train) + 3,515 (held-out test) from HuggingFace |
-| **cobanov/shakespeare-dataset** | 42 files | Raw texts for EDA | 965K tokens, 26K vocabulary; used for vocabulary analysis only |
+**Final splits**:
+- Train: 40,084 records (20,042 unique pairs × 2 for bidirectional training)
+- Validation: 2,234 records
+- Test (held-out): 3,515 records
 
-### Processing Pipeline (Notebook 01)
-
-1. **Merge** ayaan04 (18,395) + Roudranil train (5,272) → 23,667 rows
-2. **Deduplicate** on modern column → 22,743 rows
-3. **Length filter** (≤512 chars) → 20,042 train + 2,274 val
-4. **Bidirectional expansion** (train set only): 20,042 pairs × 2 (Mod→Shak + Shak→Mod) → **40,084 records** for training
-5. **Held-out test**: Roudranil test split (**3,515 examples**, Modern→Shak only, **left unfiltered** to evaluate natural distribution)
-
-### Dataset Statistics (Notebook 02)
-
-| Metric | Value |
-|---|---|
-| **Train records (bidirectional)** | 40,084 |
-| **Validation records** | 2,234 |
-| **Test records (held-out)** | 3,515 |
-| **Median Modern length** | 43 characters |
-| **Median Shakespeare length** | 44 characters |
-| **Vocabulary overlap (Jaccard)** | 0.392 (39.2%) |
-| **Unique archaic words** | 911 (thou, thee, thy, hath, doth, 'tis, etc.) |
-
-### Chat Format
-
-All records formatted for supervised fine-tuning with system prompt:
-
-```json
-{
-  "messages": [
-    {
-      "role": "system",
-      "content": "You are an expert translator of Modern English into Shakespearean English..."
-    },
-    {
-      "role": "user",
-      "content": "I have half a mind to hit you."
-    },
-    {
-      "role": "assistant",
-      "content": "I have a mind to strike thee."
-    }
-  ]
-}
-```
-
-Bidirectional training includes both Modern→Shakespeare and Shakespeare→Modern with distinct system prompts.
+**Format**: Chat-format JSONL (system prompt + user input + assistant target)
 
 ---
 
-## Results Files
+## Requirements
 
-```
-outputs/
-├── exp1/results/bleu_scores.json                 # Exp1 metrics
-├── exp2/results/bleu_scores.json                 # Exp2 metrics
-│                 comparison_table.csv
-├── exp3/results/bleu_scores.json                 # Exp3 metrics
-│                 comparison_table_all_exp.csv    # All 3 experiments
-│                 all_variants_metrics.csv        # All 6 models
-│                 efficiency_rankings.csv         # Quality per parameter
-│                 qa_evaluation_10sample.json     # QA validation
-│                 figures/
-│                   ├── all_exp_bleu_chrf.png
-│                   ├── exp2_vs_exp3_bertscore.png
-│                   └── efficiency_scatter.png
-```
+- Python 3.11+
+- PyTorch 2.11+
+- CUDA 12.8 (for RTX 5070)
+- ~50 GB disk (model cache + data)
+- RTX 5070 Laptop GPU (8.5 GB VRAM minimum)
 
 ---
 
-## Reproducibility
+## Next Steps
 
-- Python 3.11+, PyTorch 2.1.0, Transformers 4.35+
-- **RTX 5070 Laptop GPU** GPU (8.5 GB VRAM)
-- peft, datasets, sacrebleu, bert-score
-- **Estimated total time**: ~20 hours (RTX 5070 Laptop GPU, sequential execution)
+1. Set up environment (Steps 1-5 above)
+2. Run notebooks in order (01→08)
+3. Check results in `outputs/exp3/results/`
+4. Review findings in **REPORT.md**
 
+Questions? See troubleshooting section above, or check notebook comments.
