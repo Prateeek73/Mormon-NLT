@@ -1,0 +1,20 @@
+{
+  "lora": {
+    "corpus_bleu": 0.1,
+    "corpus_chrf": 5.73,
+    "sent_bleu_mean": 2.25,
+    "sent_bleu_std": 3.82,
+    "sent_bleu_p25": 0.0,
+    "sent_bleu_p50": 1.03,
+    "sent_bleu_p75": 3.45
+  },
+  "fft": {
+    "corpus_bleu": 0.09,
+    "corpus_chrf": 4.83,
+    "sent_bleu_mean": 2.21,
+    "sent_bleu_std": 4.06,
+    "sent_bleu_p25": 0.0,
+    "sent_bleu_p50": 0.39,
+    "sent_bleu_p75": 3.3
+  }
+}

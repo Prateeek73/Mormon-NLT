@@ -1,0 +1,44 @@
+{
+  "n_samples": 50,
+  "qa_results": {
+    "Exp1 LoRA": {
+      "success": 32,
+      "partial": 11,
+      "fail": 7
+    },
+    "Exp2 LoRA": {
+      "success": 36,
+      "partial": 11,
+      "fail": 3
+    },
+    "Exp3 LoRA": {
+      "success": 42,
+      "partial": 6,
+      "fail": 2
+    },
+    "Exp1 FFT": {
+      "success": 30,
+      "partial": 12,
+      "fail": 8
+    },
+    "Exp2 FFT": {
+      "success": 35,
+      "partial": 12,
+      "fail": 3
+    },
+    "Exp3 FFT": {
+      "success": 41,
+      "partial": 7,
+      "fail": 2
+    }
+  },
+  "qa_scores": {
+    "Exp1 LoRA": 0.75,
+    "Exp2 LoRA": 0.83,
+    "Exp3 LoRA": 0.9,
+    "Exp1 FFT": 0.72,
+    "Exp2 FFT": 0.82,
+    "Exp3 FFT": 0.89
+  },
+  "note": "Projected values; update after manual review"
+}

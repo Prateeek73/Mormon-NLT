@@ -1,0 +1,7 @@
+Run,Corpus BLEU,Corpus ChrF,Sent BLEU Mean,Sent BLEU P50,BERTScore F1,BERTScore P,BERTScore R
+"Exp1 — LoRA  (3B, r=16, bidir,  3ep,  LR=2e-4)",0.1,5.73,2.25,1.03,N/A,-,-
+"Exp2 — LoRA  (3B, r=16, bidir,  2ep+ES, LR=2e-4)",0.12,5.56,2.13,0.77,0.695,0.7143,0.6785
+"Exp3 — LoRA  (3B, r=32, unidir, 2ep+ES, LR=2e-4)",0.12,5.4,2.23,0.72,0.8405,0.8579,0.825
+"Exp1 — FFT   (1.5B, bidir,  3ep, LR=2e-5)",0.09,4.83,2.21,0.39,N/A,-,-
+"Exp2 — FFT   (1.5B, bidir,  3ep, LR=5e-5)",0.08,4.75,2.23,0.63,0.6831,0.7066,0.6628
+"Exp3 — FFT   (1.5B, unidir, 3ep, LR=5e-5)",0.1,5.27,2.32,0.8,0.8415,0.8596,0.8254

@@ -1,0 +1,27 @@
+{
+  "lora": {
+    "corpus_bleu": 0.12,
+    "corpus_chrf": 5.4,
+    "sent_bleu_mean": 2.23,
+    "sent_bleu_std": 4.14,
+    "sent_bleu_p25": 0.0,
+    "sent_bleu_p50": 0.72,
+    "sent_bleu_p75": 3.39,
+    "bert_p_mean": 0.8579,
+    "bert_r_mean": 0.825,
+    "bert_f1_mean": 0.8405
+  },
+  "fft": {
+    "corpus_bleu": 0.1,
+    "corpus_chrf": 5.27,
+    "sent_bleu_mean": 2.32,
+    "sent_bleu_std": 4.18,
+    "sent_bleu_p25": 0.0,
+    "sent_bleu_p50": 0.8,
+    "sent_bleu_p75": 3.52,
+    "bert_p_mean": 0.8596,
+    "bert_r_mean": 0.8254,
+    "bert_f1_mean": 0.8415
+  },
+  "bert_model": "roberta-large"
+}

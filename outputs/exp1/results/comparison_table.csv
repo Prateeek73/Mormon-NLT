@@ -1,0 +1,13 @@
+Metric,LoRA,FFT
+Model,Qwen2.5-3B-Instruct,Qwen2.5-1.5B-Instruct
+Base,Qwen2.5-3B-Instruct,Qwen2.5-1.5B-Instruct
+Trainable Params,~13M (0.4%),1.54B (100%)
+Corpus BLEU,0.1,0.09
+Corpus ChrF,5.73,4.83
+Sent BLEU Mean,2.25,2.21
+Sent BLEU Std,3.82,4.06
+Sent BLEU P50,1.03,0.39
+LR,2e-4,2e-5
+Epochs,3,3
+Est. VRAM,~10-12 GB,~12-14 GB
+Est. Train Time,~2 hours,~1-2 hours
