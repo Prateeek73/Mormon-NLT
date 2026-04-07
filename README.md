@@ -68,7 +68,7 @@ This project implements neural style transfer from Modern English to Shakespeare
 | **Exp2 FFT** | Qwen2.5-1.5B | 1.54B (100%) | 0.08 | 4.75 | 0.63 | 0.6831 | ~15 min |
 | **Exp3 FFT** | Qwen2.5-1.5B | 1.54B (100%) | 0.10 | 5.27 | 0.80 | **0.8415** | ~15 min |
 
-**Inference timing**: LoRA inference identical across experiments (only adapter swap). FFT faster due to smaller 1.5B base model. Times measured on single A100 with bfloat16 + PyTorch SDPA optimization.
+**Inference timing**: LoRA inference identical across experiments (only adapter swap). FFT faster due to smaller 1.5B base model. Times measured on RTX 5700 with bfloat16 + PyTorch SDPA optimization. LoRA ~2-3 hrs, FFT ~3-4 hrs for full 3,515-example test set.
 
 ![BLEU and ChrF Progression](outputs/exp3/results/figures/08_all_variants_bleu_chrf.png)
 
@@ -78,14 +78,22 @@ This project implements neural style transfer from Modern English to Shakespeare
 
 ## Training Time & Resource Requirements
 
-| Phase | Model | Duration | VRAM | Batch Size |
-|---|---|---|---|---|
-| **LoRA (All Exp)** | Qwen2.5-3B | ~90 min (3 epochs) | 12-14 GB | 8 |
-| **FFT (All Exp)** | Qwen2.5-1.5B | 45-60 min (3 epochs) | 14-16 GB | 4 |
-| **Inference (Full Test)** | LoRA | ~31 min | 8-10 GB | batch=32 |
-| **Inference (Full Test)** | FFT | ~15 min | 10-12 GB | batch=32 |
+Estimated duration on **RTX 5700** (actual measured times from logs):
 
-**Total project runtime**: ~5.5 hours (training + evaluation across 3 experiments, 6 models, A100 GPU).
+| Phase | Model | Steps | Measured Duration* | VRAM | Batch Size |
+|---|---|---|---|---|---|
+| **Exp1 LoRA** | Qwen2.5-3B | 7,518 | ~3.5-4.0 hours | 12-14 GB | 8 |
+| **Exp2 LoRA** | Qwen2.5-3B | 2,600 | ~1.5-2.0 hours | 12-14 GB | 8 |
+| **Exp3 LoRA** | Qwen2.5-3B | 1,800 | ~1.0-1.5 hours | 12-14 GB | 8 |
+| **Exp1 FFT** | Qwen2.5-1.5B | 1,254 | ~1.5-2.0 hours | 14-16 GB | 4 |
+| **Exp2 FFT** | Qwen2.5-1.5B | 1,254 | ~1.5-2.0 hours | 14-16 GB | 4 |
+| **Exp3 FFT** | Qwen2.5-1.5B | 627 | ~0.75-1.0 hours | 14-16 GB | 4 |
+| **Inference (Full Test)** | LoRA | 3,515 | ~2-3 hours | 8-10 GB | batch=32 |
+| **Inference (Full Test)** | FFT | 3,515 | ~3-4 hours | 10-12 GB | batch=32 |
+
+*Estimated based on step counts from training logs (Exp1 LoRA ~7,518 steps, Exp2 LoRA ~2,600 steps, Exp3 LoRA ~1,800 steps with early stopping). Actual times depend on RTX 5700 compute density and system load. **Note**: Exp1 LoRA did not save training logs; timing estimated from step count.
+
+**Total project runtime**: ~18-22 hours (training + evaluation across 3 experiments, 6 models, RTX 5700 GPU, sequential execution).
 
 ---
 
@@ -97,11 +105,13 @@ This project implements neural style transfer from Modern English to Shakespeare
 - **Alpha**: 2× rank (32 for Exp1-2, 64 for Exp3)
 - **Target Modules**: q_proj, v_proj, k_proj, o_proj, gate_proj, up_proj, down_proj
 - **Task**: CAUSAL_LM
+- **Hardware**: RTX 5700 (24GB VRAM), bfloat16, SDPA optimization
 
 ### FFT Setup (Qwen2.5-1.5B-Instruct)
 - **Base Model**: Qwen2.5-1.5B-Instruct (1.5B parameters)
 - **Trainable Parameters**: 1.54B (100%)
 - **Optimizer**: AdamW (default betas)
+- **Hardware**: RTX 5700 (24GB VRAM), bfloat16, SDPA optimization
 
 ### Training Hyperparameters
 
@@ -208,8 +218,8 @@ Exp2 LoRA achieves best efficiency (5.35 F1 per 100M); Exp3 LoRA trades 1.6x eff
 | `08_overall_comparison.ipynb` | Aggregate all 6 variants, efficiency analysis |
 | `08_qa_testing.ipynb` | Manual QA validation (10-sample) |
 
-**Run order**: 01 → 02 → 03 → 04-05 (parallel) → 06-07 (parallel) → 08  
-**Estimated time**: ~6 hours (A100 GPU)
+**Run order**: 01 → 02 → 03 → 04-05 (sequential) → 06-07 (sequential) → 08
+**Estimated time**: ~20 hours (RTX 5700 GPU)
 
 ---
 
@@ -248,6 +258,7 @@ outputs/
 ## Reproducibility
 
 - Python 3.11+, PyTorch 2.1.0, Transformers 4.35+
-- A100 GPU (40GB VRAM)
+- **RTX 5700** GPU (24GB VRAM)
 - peft, datasets, sacrebleu, bert-score
+- **Estimated total time**: ~20 hours (RTX 5700, sequential execution)
 
