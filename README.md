@@ -70,6 +70,10 @@ This project implements neural style transfer from Modern English to Shakespeare
 
 **Inference timing**: LoRA inference identical across experiments (only adapter swap). FFT faster due to smaller 1.5B base model. Times measured on single A100 with bfloat16 + PyTorch SDPA optimization.
 
+![BLEU and ChrF Progression](outputs/exp3/results/figures/08_all_variants_bleu_chrf.png)
+
+*All 6 model variants (3 experiments × 2 methods). LoRA (blue, varying opacity) and FFT (orange, varying opacity) show progression from Exp1→3. Unidirectional training (Exp3, full opacity) achieves highest BERTScore but minimal BLEU/ChrF gains, indicating embedding-level improvement without proportional surface-form change.*
+
 ---
 
 ## Training Time & Resource Requirements
@@ -126,6 +130,10 @@ Character-level n-gram overlap (n=1-6), more robust to morphological variation t
 ### BERTScore F1
 Semantic similarity via contextual embeddings (avg pooled cosine similarity). **Exp2 uses distilbert-base-uncased; Exp3 uses roberta-large** for improved fidelity.
 
+![BERTScore F1 Progression](outputs/exp3/results/figures/08_bertscore_progression.png)
+
+*Major improvements from Exp2→Exp3. LoRA F1: 0.695→0.8405 (+20.9%), FFT F1: 0.6831→0.8415 (+23.1%). Unidirectional training (Exp3) delivers breakthrough gains. Both reach 0.84 target, indicating strong semantic embedding alignment. Note: These gains do not translate to equivalent QA preservation (see validation section below).*
+
 ---
 
 ## Critical Validation: QA Semantic Preservation
@@ -143,6 +151,8 @@ Manual QA evaluation (10 representative examples) reveals **severe BERTScore-QA 
 
 **Key Finding**: BERTScore exhibits **no correlation with semantic preservation**. Exp3 LoRA (highest F1=0.84) achieves only 35% correct QA preservation vs 40% for simpler Exp1 LoRA. Models frequently hallucinate plausible-sounding Shakespearean text unrelated to source (entities, plot lost). Standard embedding-based metrics insufficient for style transfer evaluation.
 
+*Figure: BERTScore-QA disconnect plot would show here (manual results from qa_evaluation_10sample.json). Exp3 LoRA (0.84 F1) → 35% QA; Exp1 LoRA (N/A F1) → 40% QA. Largest gap: Exp3 FFT (0.84 F1) → only 20% QA. This reveals that BERTScore captures surface embedding similarity but misses factual accuracy and semantic preservation.*
+
 ---
 
 ## Efficiency Rankings (Quality per Parameter)
@@ -155,6 +165,10 @@ Manual QA evaluation (10 representative examples) reveals **severe BERTScore-QA 
 | **Exp2 FFT** | 1.540 | 0.6831 | **0.044** |
 
 Exp2 LoRA achieves best efficiency (5.35 F1 per 100M); Exp3 LoRA trades 1.6x efficiency for 20.9% quality via doubling rank.
+
+![Efficiency Trade-off: Parameters vs Quality](outputs/exp3/results/figures/08_efficiency_scatter.png)
+
+*Log-scale parameter axis reveals LoRA's efficiency advantage. Exp3 LoRA (26M params, F1=0.8405) approaches Exp3 FFT quality (1.54B params, F1=0.8415) with ~60x fewer trainable parameters. FFT provides marginal quality gain (0.001 F1) at 59x cost—LoRA dominates on efficiency frontier. Exp2 LoRA offers even better efficiency (5.3 F1/100M) but at lower absolute quality (0.695 F1).*
 
 ---
 
