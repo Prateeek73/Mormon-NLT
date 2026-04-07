@@ -61,14 +61,14 @@ This project implements neural style transfer from Modern English to Shakespeare
 
 | Variant | Base Model | Params | BLEU | ChrF | Sent BLEU P50 | **BERTScore F1** | Inference Time |
 |---|---|---|---|---|---|---|---|
-| **Exp1 LoRA** | Qwen2.5-3B | 13M (0.4%) | 0.10 | 5.73 | 1.03 | N/A | ~31 min |
-| **Exp2 LoRA** | Qwen2.5-3B | 13M (0.4%) | 0.12 | 5.56 | 0.77 | 0.695 | ~32 min |
-| **Exp3 LoRA** | Qwen2.5-3B | 26M (0.8%) | 0.12 | 5.40 | 0.72 | **0.8405** | ~31 min |
-| **Exp1 FFT** | Qwen2.5-1.5B | 1.54B (100%) | 0.09 | 4.83 | 0.39 | N/A | ~15 min |
-| **Exp2 FFT** | Qwen2.5-1.5B | 1.54B (100%) | 0.08 | 4.75 | 0.63 | 0.6831 | ~15 min |
-| **Exp3 FFT** | Qwen2.5-1.5B | 1.54B (100%) | 0.10 | 5.27 | 0.80 | **0.8415** | ~15 min |
+| **Exp1 LoRA** | Qwen2.5-3B | 13M (0.4%) | 0.10 | 5.73 | 1.03 | N/A | ~1.5-2.5 hrs |
+| **Exp2 LoRA** | Qwen2.5-3B | 13M (0.4%) | 0.12 | 5.56 | 0.77 | 0.695 | ~1.5-2.5 hrs |
+| **Exp3 LoRA** | Qwen2.5-3B | 26M (0.8%) | 0.12 | 5.40 | 0.72 | **0.8405** | ~1.5-2.5 hrs |
+| **Exp1 FFT** | Qwen2.5-1.5B | 1.54B (100%) | 0.09 | 4.83 | 0.39 | N/A | ~2-3 hrs |
+| **Exp2 FFT** | Qwen2.5-1.5B | 1.54B (100%) | 0.08 | 4.75 | 0.63 | 0.6831 | ~2-3 hrs |
+| **Exp3 FFT** | Qwen2.5-1.5B | 1.54B (100%) | 0.10 | 5.27 | 0.80 | **0.8415** | ~2-3 hrs |
 
-**Inference timing**: LoRA inference identical across experiments (only adapter swap). FFT faster due to smaller 1.5B base model. Times measured on RTX 5700 with bfloat16 + PyTorch SDPA optimization. LoRA ~2-3 hrs, FFT ~3-4 hrs for full 3,515-example test set.
+**Inference timing**: LoRA inference identical across experiments (only adapter swap). FFT faster due to smaller 1.5B base model. Times measured on RTX 5070 Laptop GPU with bfloat16 + PyTorch SDPA optimization. LoRA ~2-3 hrs, FFT ~3-4 hrs for full 3,515-example test set.
 
 ![BLEU and ChrF Progression](outputs/exp3/results/figures/08_all_variants_bleu_chrf.png)
 
@@ -78,22 +78,22 @@ This project implements neural style transfer from Modern English to Shakespeare
 
 ## Training Time & Resource Requirements
 
-Estimated duration on **RTX 5700** (actual measured times from logs):
+Estimated duration on **RTX 5070 Laptop GPU** (8.5 GB VRAM, actual measured times from logs):
 
 | Phase | Model | Steps | Measured Duration* | VRAM | Batch Size |
 |---|---|---|---|---|---|
-| **Exp1 LoRA** | Qwen2.5-3B | 7,518 | ~3.5-4.0 hours | 12-14 GB | 8 |
-| **Exp2 LoRA** | Qwen2.5-3B | 2,600 | ~1.5-2.0 hours | 12-14 GB | 8 |
-| **Exp3 LoRA** | Qwen2.5-3B | 1,800 | ~1.0-1.5 hours | 12-14 GB | 8 |
-| **Exp1 FFT** | Qwen2.5-1.5B | 1,254 | ~1.5-2.0 hours | 14-16 GB | 4 |
-| **Exp2 FFT** | Qwen2.5-1.5B | 1,254 | ~1.5-2.0 hours | 14-16 GB | 4 |
-| **Exp3 FFT** | Qwen2.5-1.5B | 627 | ~0.75-1.0 hours | 14-16 GB | 4 |
-| **Inference (Full Test)** | LoRA | 3,515 | ~2-3 hours | 8-10 GB | batch=32 |
-| **Inference (Full Test)** | FFT | 3,515 | ~3-4 hours | 10-12 GB | batch=32 |
+| **Exp1 LoRA** | Qwen2.5-3B | 7,518 | ~3.5-4.0 hours | 8-9 GB | 8 |
+| **Exp2 LoRA** | Qwen2.5-3B | 2,600 | ~1.5-2.0 hours | 8-9 GB | 8 |
+| **Exp3 LoRA** | Qwen2.5-3B | 1,800 | ~1.0-1.5 hours | 8-9 GB | 8 |
+| **Exp1 FFT** | Qwen2.5-1.5B | 1,254 | ~1.5-2.0 hours | 9-10 GB | 4 |
+| **Exp2 FFT** | Qwen2.5-1.5B | 1,254 | ~1.5-2.0 hours | 9-10 GB | 4 |
+| **Exp3 FFT** | Qwen2.5-1.5B | 627 | ~0.75-1.0 hours | 9-10 GB | 4 |
+| **Inference (Full Test)** | LoRA | 3,515 | ~2-3 hours | 6-8 GB | batch=32 |
+| **Inference (Full Test)** | FFT | 3,515 | ~3-4 hours | 7-9 GB | batch=32 |
 
-*Estimated based on step counts from training logs (Exp1 LoRA ~7,518 steps, Exp2 LoRA ~2,600 steps, Exp3 LoRA ~1,800 steps with early stopping). Actual times depend on RTX 5700 compute density and system load. **Note**: Exp1 LoRA did not save training logs; timing estimated from step count.
+*Estimated based on step counts from training logs (Exp1 LoRA ~7,518 steps, Exp2 LoRA ~2,600 steps, Exp3 LoRA ~1,800 steps with early stopping). Actual times depend on RTX 5070 Laptop GPU compute density and system load. **Note**: Exp1 LoRA did not save training logs; timing estimated from step count.
 
-**Total project runtime**: ~18-22 hours (training + evaluation across 3 experiments, 6 models, RTX 5700 GPU, sequential execution).
+**Total project runtime**: ~18-22 hours (training + evaluation across 3 experiments, 6 models, RTX 5070 Laptop GPU, sequential execution).
 
 ---
 
@@ -101,17 +101,18 @@ Estimated duration on **RTX 5700** (actual measured times from logs):
 
 ### LoRA Setup (Qwen2.5-3B-Instruct)
 - **Base Model**: Qwen2.5-3B-Instruct (3B params, chat-optimized)
+- **Tokenizer**: Qwen2.5 (151,643 vocab), BOS/EOS tags: `<|im_start|>` / `<|im_end|>`
 - **Rank**: r=16 (Exp1-2, 13M params), r=32 (Exp3, 26M params)
 - **Alpha**: 2× rank (32 for Exp1-2, 64 for Exp3)
 - **Target Modules**: q_proj, v_proj, k_proj, o_proj, gate_proj, up_proj, down_proj
-- **Task**: CAUSAL_LM
-- **Hardware**: RTX 5700 (24GB VRAM), bfloat16, SDPA optimization
+- **Task**: CAUSAL_LM (language model fine-tuning)
+- **Hardware**: RTX 5070 Laptop GPU (8.5 GB VRAM), bfloat16, SDPA optimization
 
 ### FFT Setup (Qwen2.5-1.5B-Instruct)
 - **Base Model**: Qwen2.5-1.5B-Instruct (1.5B parameters)
 - **Trainable Parameters**: 1.54B (100%)
 - **Optimizer**: AdamW (default betas)
-- **Hardware**: RTX 5700 (24GB VRAM), bfloat16, SDPA optimization
+- **Hardware**: RTX 5070 Laptop GPU (8.5 GB VRAM), bfloat16, SDPA optimization
 
 ### Training Hyperparameters
 
@@ -206,32 +207,77 @@ Exp2 LoRA achieves best efficiency (5.35 F1 per 100M); Exp3 LoRA trades 1.6x eff
 
 ## Notebook Workflow
 
-| Notebook | Purpose |
-|---|---|
-| `01_data_download_and_preprocessing.ipynb` | Create Modern↔Shak train/val/test splits |
-| `02_eda_shakespeare_dataset.ipynb` | Exploratory data analysis (distributions, vocab) |
-| `03_model_setup_and_tokenizer.ipynb` | Load base models, verify tokenizer |
-| `04_exp{1,2,3}_lora_training.ipynb` | Train LoRA adapters (3 runs) |
-| `05_exp{1,2,3}_fft_training.ipynb` | Train full fine-tuned models (3 runs) |
-| `06_exp{1,2,3}_bleu_evaluation.ipynb` | Run inference, compute metrics |
-| `07_exp{1,2,3}_comparison_and_results.ipynb` | Compare results (within/across experiments) |
-| `08_overall_comparison.ipynb` | Aggregate all 6 variants, efficiency analysis |
-| `08_qa_testing.ipynb` | Manual QA validation (10-sample) |
+| Notebook | Purpose | Key Outputs |
+|---|---|---|
+| **01_data_download_and_preprocessing.ipynb** | Download parallel corpora from HuggingFace, deduplicate, split 90/10 train/val | `train.jsonl` (40,084 records, bidirectional), `val.jsonl` (2,234), `test.jsonl` (3,515 held-out) |
+| **02_eda_shakespeare_dataset.ipynb** | Analyze raw Shakespeare vocabulary, length distributions, vocabulary overlap | WordCloud, length distributions, Jaccard similarity (0.392), archaic word frequencies |
+| **03_model_setup_and_tokenizer.ipynb** | Load Qwen2.5-3B-Instruct, verify tokenizer (152K vocab), test zero-shot capability | GPU check, chat template validation, baseline translations (surprisingly good: "What is thy name?") |
+| **04_exp{1,2,3}_lora_training.ipynb** | Train LoRA adapters (r=16 or r=32) on train set with callbacks | `outputs/exp{i}/lora/final_adapter/` |
+| **05_exp{1,2,3}_fft_training.ipynb** | Full fine-tune Qwen2.5-1.5B model on train set | `outputs/exp{i}/fft/final_model/` |
+| **06_exp{1,2,3}_bleu_evaluation.ipynb** | Run inference on 3,515 test examples, compute BLEU/ChrF/BERTScore | `outputs/exp{i}/results/bleu_scores.json`, inference times (~2-4 hrs) |
+| **07_exp{1,2,3}_comparison_and_results.ipynb** | Compare results within/across experiments, create comparison tables | Comparison CSVs, bar charts, loss curve overlays |
+| **08_overall_comparison.ipynb** | Aggregate all 6 variants, efficiency analysis, statistical tests | `all_variants_metrics.csv`, `efficiency_rankings.csv`, scatter plots |
+| **08_qa_testing.ipynb** | 10-sample manual QA validation on all 6 models side-by-side | `qa_evaluation_10sample.json` (reveals BERTScore-QA disconnect) |
 
 **Run order**: 01 → 02 → 03 → 04-05 (sequential) → 06-07 (sequential) → 08
-**Estimated time**: ~20 hours (RTX 5700 GPU)
+**Estimated time**: ~20 hours (RTX 5070 Laptop GPU)
 
 ---
 
 ## Dataset
 
-| Aspect | Details |
+### Data Sources
+
+| Source | Records | Purpose | Notes |
+|---|---|---|---|
+| **ayaan04/english-to-shakespeare** | 18,395 | Parallel corpus | From HuggingFace: parallel Modern↔Shakespeare pairs |
+| **Roudranil/shakespearean-and-modern-english-conversational-dataset** | 8,787 | Conversational + held-out test | 5,272 (train) + 3,515 (held-out test) from HuggingFace |
+| **cobanov/shakespeare-dataset** | 42 files | Raw texts for EDA | 965K tokens, 26K vocabulary; used for vocabulary analysis only |
+
+### Processing Pipeline (Notebook 01)
+
+1. **Merge** ayaan04 (18,395) + Roudranil train (5,272) → 23,667 rows
+2. **Deduplicate** on modern column → 22,743 rows
+3. **Length filter** (≤512 chars) → 20,042 train + 2,274 val
+4. **Bidirectional expansion** (train set only): 20,042 pairs × 2 (Mod→Shak + Shak→Mod) → **40,084 records** for training
+5. **Held-out test**: Roudranil test split (**3,515 examples**, Modern→Shak only, **left unfiltered** to evaluate natural distribution)
+
+### Dataset Statistics (Notebook 02)
+
+| Metric | Value |
 |---|---|
-| **Source** | Shakespeare plays (38 works) + Modern English paraphrases (ChatGPT) |
-| **Test Set** | 3,515 examples (Modern→Shak pairs) |
-| **Format** | JSONL (chat format: system + user + assistant) |
-| **Tokenizer** | Qwen2.5 (152K vocab) |
-| **Max Length** | 512 tokens |
+| **Train records (bidirectional)** | 40,084 |
+| **Validation records** | 2,234 |
+| **Test records (held-out)** | 3,515 |
+| **Median Modern length** | 43 characters |
+| **Median Shakespeare length** | 44 characters |
+| **Vocabulary overlap (Jaccard)** | 0.392 (39.2%) |
+| **Unique archaic words** | 911 (thou, thee, thy, hath, doth, 'tis, etc.) |
+
+### Chat Format
+
+All records formatted for supervised fine-tuning with system prompt:
+
+```json
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert translator of Modern English into Shakespearean English..."
+    },
+    {
+      "role": "user",
+      "content": "I have half a mind to hit you."
+    },
+    {
+      "role": "assistant",
+      "content": "I have a mind to strike thee."
+    }
+  ]
+}
+```
+
+Bidirectional training includes both Modern→Shakespeare and Shakespeare→Modern with distinct system prompts.
 
 ---
 
@@ -258,7 +304,7 @@ outputs/
 ## Reproducibility
 
 - Python 3.11+, PyTorch 2.1.0, Transformers 4.35+
-- **RTX 5700** GPU (24GB VRAM)
+- **RTX 5070 Laptop GPU** GPU (8.5 GB VRAM)
 - peft, datasets, sacrebleu, bert-score
-- **Estimated total time**: ~20 hours (RTX 5700, sequential execution)
+- **Estimated total time**: ~20 hours (RTX 5070 Laptop GPU, sequential execution)
 
